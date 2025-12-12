@@ -7,9 +7,9 @@ Program ini adalah aplikasi untuk pengelolaan data Praktik Kerja Lapangan (PKL).
 
 Pastikan Anda telah menginstal software berikut di komputer Anda sebelum memulai:
 
-*   **Bahasa Pemrograman/Runtime:** (Misal: PHP >= 8.0 / Node.js / Java JDK)
-*   **Database:** (Misal: MySQL / PostgreSQL)
-*   **Dependency Manager:** (Misal: Composer / NPM / Maven)
+*   **Bahasa Pemrograman/Runtime:** (PHP >= 8.0 )
+*   **Database:** (MySQL )
+*   **Dependency Manager:** (Composer)
 
 ## Cara Setup (Instalasi)
 
@@ -22,8 +22,8 @@ Pastikan Anda telah menginstal software berikut di komputer Anda sebelum memulai
 2.  **Install Dependencies**
     Jalankan perintah berikut untuk mengunduh library yang dibutuhkan:
     ```bash
-    # cd backend
-    # composer install  (untuk PHP)
+    cd backend
+    composer install
     ```
 
 3.  **Konfigurasi Environment**
