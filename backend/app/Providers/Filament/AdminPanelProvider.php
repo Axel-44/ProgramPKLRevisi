@@ -18,6 +18,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Illuminate\Support\HtmlString;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -28,6 +29,19 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('Admin Panel BKAD Kota Bogor')
+            ->brandLogo(new HtmlString('
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img 
+                        src="'.asset('images/logo-bkad-kota-bogor.png').'" 
+                        alt="Logo BKAD" 
+                        style="height: 3rem;" 
+                    />
+                    <span style="font-weight: 700; font-size: 1.1rem; color: #f59e0b;">
+                        BKAD Kota Bogor
+                    </span>
+                </div>
+            '))
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -38,8 +52,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                \App\Filament\Admin\Widgets\StatsOverview::class,
+                \App\Filament\Admin\Widgets\ActivityLogWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
