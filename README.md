@@ -40,7 +40,7 @@ Pastikan Anda telah menginstal software berikut di komputer Anda sebelum memulai
     DB_USERNAME=root
     DB_PASSWORD=
     ```
-4. **Konfigurasi Database"
+4. **Konfigurasi Database**
     Buat Database baru jika belum ada dengan nama:
     ```bash
     bkad
