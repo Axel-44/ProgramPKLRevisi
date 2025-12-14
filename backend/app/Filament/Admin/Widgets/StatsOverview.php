@@ -4,7 +4,7 @@ namespace App\Filament\Admin\Widgets;
 
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-// use App\Models\Berita;
+use App\Models\Berita;
 use App\Models\Agenda;
 // use App\Models\Dokumen;
 use App\Models\User;
@@ -16,11 +16,11 @@ class StatsOverview extends BaseWidget
     protected function getStats(): array
     {
         return [
-            // Stat::make('Berita', Berita::count())
-            //     ->description('Total berita terpublikasi')
-            //     ->descriptionIcon('heroicon-m-newspaper')
-            //     ->chart([7, 2, 10, 3, 15, 4, 17]) 
-            //     ->color('info'),
+            Stat::make('Berita', Berita::count())
+                ->description('Total berita terpublikasi')
+                ->descriptionIcon('heroicon-m-newspaper')
+                ->chart([7, 2, 10, 3, 15, 4, 17]) 
+                ->color('info'),
 
 
             Stat::make('Agenda', Agenda::count())
