@@ -6,7 +6,7 @@ use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use App\Models\Berita;
 use App\Models\Agenda;
-// use App\Models\Dokumen;
+use App\Models\Dokumen;
 use App\Models\User;
 
 class StatsOverview extends BaseWidget
@@ -28,10 +28,10 @@ class StatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-calendar')
                 ->color('danger'),
 
-            // Stat::make('Dokumen', Dokumen::count())
-            //     ->description('Total dokumen arsip')
-            //     ->descriptionIcon('heroicon-m-document-text')
-            //     ->color('warning'), 
+            Stat::make('Dokumen', Dokumen::count())
+                ->description('Total dokumen arsip')
+                ->descriptionIcon('heroicon-m-document-text')
+                ->color('warning'), 
 
             Stat::make('Users', User::count())
                 ->description('Total pengguna terdaftar')
