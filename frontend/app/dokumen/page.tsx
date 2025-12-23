@@ -1,276 +1,368 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Download, Search } from 'lucide-react';
+import { Download, Search, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-interface KategoriDokumenInfo {
+// --- Interfaces (Sesuaikan dengan data dari API) ---
+interface Kategori {
     id: number;
     nama_kategori: string;
 }
 
-interface RilisKategoriInfo {
+interface User {
     id: number;
-    nama: string;
+    name: string;
 }
 
 interface Dokumen {
     id: number;
     title: string;
-    file_path: string; 
+    file_path: string;
     created_at: string;
-    tanggal_dokumen?: string;
-    tahun: number; 
-    kategori_dokumen?: KategoriDokumenInfo;
-    rilis_kategori?: RilisKategoriInfo;
+    tanggal_dokumen: string; // Tanggal input manual
+    tahun: string | number;  // Tahun input manual
+    kategori_dokumen?: { nama_kategori: string };
+    rilis_kategori?: { nama: string };
+    user?: User; // Data uploader
 }
 
-
+// --- Konfigurasi API ---
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 const STORAGE_URL = "http://127.0.0.1:8000/storage/";
 
 export default function DokumenPage() {
+    // State Data
     const [documents, setDocuments] = useState<Dokumen[]>([]);
-    const [searchTerm, setSearchTerm] = useState<string>("");
-    const [tanggalFilter, setTanggalFilter] = useState<string>("");
-    const [rilisFilter, setRilisFilter] = useState<string>("");
+    const [categories, setCategories] = useState<Kategori[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // State Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
 
+    // State Filter
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedYear, setSelectedYear] = useState("");
+    const [selectedDate, setSelectedDate] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState<number | null>(null); // null = Semua Kategori
+
+    // 1. Fetch Daftar Kategori (Sekali saja saat load)
     useEffect(() => {
-        const fetchDocuments = async () => {
-            setLoading(true);
+        const fetchCategories = async () => {
             try {
-                const params = new URLSearchParams();
-                
-                
-                if (searchTerm) {
-                    params.append('search', searchTerm);
-                }
-                if (tanggalFilter) {
-                    params.append('tanggal_dokumen', tanggalFilter);
-                }
-                if (rilisFilter) {
-                    params.append('rilis_kategori_id', rilisFilter);
-                }
-                params.append('page', currentPage.toString());
-
-                console.log("Mengambil data dari:", `${API_BASE_URL}/dokumens?${params.toString()}`);
-
-
-                const response = await fetch(`${API_BASE_URL}/dokumen?${params.toString()}`);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-
+                const response = await fetch(`${API_BASE_URL}/categories`);
                 const result = await response.json();
-                console.log("Hasil Data:", result); 
-                
                 if (result.success) {
-                    setDocuments(result.data.data);
-                    setTotalPages(result.data.last_page);
-                } else {
-                    setDocuments([]);
+                    setCategories(result.data);
                 }
-
             } catch (error) {
-                console.error("Gagal mengambil data:", error);
-                setDocuments([]);
-            } finally {
-                setLoading(false);
+                console.error("Gagal mengambil kategori:", error);
             }
         };
+        fetchCategories();
+    }, []);
 
+    // 2. Fetch Dokumen (Setiap kali filter berubah)
+    const fetchDocuments = async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams();
+            
+            params.append('page', currentPage.toString());
+            if (searchTerm) params.append('search', searchTerm);
+            if (selectedYear) params.append('tahun', selectedYear); // Filter Tahun Spesifik
+            if (selectedDate) params.append('tanggal', selectedDate); // Filter Tanggal
+            if (selectedCategory) params.append('category_id', selectedCategory.toString()); // Filter Kategori (Pills)
+
+            const response = await fetch(`${API_BASE_URL}/dokumen?${params.toString()}`);
+            const result = await response.json();
+
+            if (result.success) {
+                setDocuments(result.data.data);
+                setTotalPages(result.data.last_page);
+                setTotalItems(result.data.total);
+            } else {
+                setDocuments([]);
+            }
+        } catch (error) {
+            console.error("Gagal mengambil dokumen:", error);
+            setDocuments([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Efek Samping: Fetch ulang saat filter/page berubah
+    useEffect(() => {
+        // Debounce sedikit agar tidak spam API saat ketik
         const timeoutId = setTimeout(() => {
             fetchDocuments();
         }, 500);
-
         return () => clearTimeout(timeoutId);
-    }, [searchTerm, tanggalFilter, rilisFilter, currentPage]);
+    }, [searchTerm, selectedYear, selectedDate, selectedCategory, currentPage]);
 
+    // Reset Filter
+    const handleReset = () => {
+        setSearchTerm("");
+        setSelectedYear("");
+        setSelectedDate("");
+        setSelectedCategory(null);
+        setCurrentPage(1);
+    };
+
+    // Format Tanggal Indonesia
     const formatDate = (dateString: string) => {
+        if (!dateString) return "-";
         return new Date(dateString).toLocaleDateString('id-ID', {
             day: 'numeric', month: 'long', year: 'numeric'
         });
     };
 
-    const renderHeader = () => (
-        <>
-            <header className="bg-white shadow-md">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center">
-                    <div className="flex items-center gap-4">
-                        <img src="/logo-bkad-kota-bogor.png" alt="Logo BKAD" className="w-12 h-12 object-cover rounded-full" />
-                        <div className="text-blue-900">
-                            <h1 className="text-xl font-bold">PORTAL BKAD</h1>
-                            <p className="text-sm">KOTA BOGOR</p>
+    return (
+        <main className="bg-gray-50 min-h-screen font-sans text-gray-800 pb-10">
+            
+            {/* --- HEADER ATAS (Logo BKAD) --- */}
+            <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-20">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                         {/* Pastikan file logo ada di public folder */}
+                        <img src="/logo-bkad-kota-bogor.png" alt="Logo BKAD" className="w-10 h-10 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} /> 
+                        <div>
+                            <h1 className="text-lg font-bold text-blue-900 leading-tight">PORTAL BKAD</h1>
+                            <p className="text-xs text-gray-500 font-medium tracking-wide">KOTA BOGOR</p>
                         </div>
                     </div>
                 </div>
             </header>
-            <div className="bg-blue-600 text-white py-2 px-4">
-                <div className="max-w-7xl mx-auto flex items-center gap-2">
-                    <a href="/" className="flex items-center gap-1 text-sm hover:underline">
-                        <span>🏠 HOME</span>
-                    </a>
-                    <span className="text-sm">/</span>
-                    <span className="text-sm font-bold">DOKUMEN & ARSIP</span>
+
+            {/* --- BREADCRUMB BIRU --- */}
+            <div className="bg-blue-600 text-white py-3 shadow-md">
+                <div className="max-w-7xl mx-auto px-4 flex items-center text-sm font-medium gap-2">
+                    <a href="/" className="hover:text-blue-200 transition">HOME</a>
+                    <span className="opacity-50">/</span>
+                    <span>DOKUMEN & ARSIP</span>
                 </div>
             </div>
-            <div className="bg-white p-6 md:p-12 shadow-md border-b">
-                <div className="max-w-7xl mx-auto flex justify-between items-center">
+
+            {/* --- JUDUL HALAMAN --- */}
+            <div className="max-w-7xl mx-auto px-4 mt-8 mb-6">
+                 <div className="flex justify-between items-end">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-800">DOKUMEN PUBLIK</h1>
-                        <p className="text-gray-500">Arsip Laporan Kinerja dan Dokumen Resmi Lainnya</p>
+                        <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight">DOKUMEN PUBLIK</h2>
+                        <p className="text-gray-500 mt-1">Arsip Laporan Kinerja dan Dokumen Resmi Lainnya</p>
                     </div>
-                    <img src="/icons/logo kota bogor.jpg" alt="Icon" className="w-24 h-24 object-contain hidden md:block" />
-                </div>
+                     {/* Logo Kota Bogor di Kanan (Opsional) */}
+                    <img src="/icons/logo kota bogor.jpg" alt="Logo Kota" className="w-16 h-16 object-contain hidden md:block opacity-80" onError={(e) => e.currentTarget.style.display = 'none'}/>
+                 </div>
             </div>
-        </>
-    );
 
-    const renderContent = () => (
-        <div className="max-w-7xl mx-auto py-8 px-4">
-            <div className="bg-white p-6 rounded-lg shadow-md border border-blue-50">
-                
-                <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                    <div className="flex-1 w-full md:w-auto">
-                        <a href="/">
-                            <Button className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-semibold w-full md:w-auto">
-                                ← Kembali
-                            </Button>
-                        </a>
-                    </div>
+            {/* --- MAIN CARD --- */}
+            <div className="max-w-7xl mx-auto px-4">
+                <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
                     
-                    <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                        <div className="relative flex-1 md:flex-auto md:w-64">
-                            <Input 
-                                type="text" 
-                                placeholder="Cari Judul" 
-                                className="pl-10 border-2 border-blue-200 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:border-blue-600 rounded-md transition-all duration-200"
-                                onChange={(e) => {
-                                    setSearchTerm(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                            />
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-blue-500" />
-                        </div>
+                    {/* FILTER SECTION (Padding Besar) */}
+                    <div className="p-6 md:p-8 space-y-6">
                         
-                        <div className="flex-1 md:flex-auto md:w-48">
-                            <Input 
-                                type="date" 
-                                className="border-2 border-blue-200 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:border-blue-600 rounded-md transition-all duration-200"
-                                value={tanggalFilter}
-                                onChange={(e) => {
-                                    setTanggalFilter(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                            />
-                        </div>
-                        
-                        <select
-                            value={rilisFilter}
-                            onChange={(e) => {
-                                setRilisFilter(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="flex-1 md:flex-auto md:w-48 px-3 py-2 border-2 border-blue-200 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:border-blue-600 rounded-md transition-all duration-200"
-                        >
-                            <option value="">Semua Kategori Rilis</option>
-                            <option value="1">Pertahun</option>
-                            <option value="2">Perbulan</option>
-                            <option value="3">Perminggu</option>
-                        </select>
-                    </div>
-                </div>
-              <div className="border border-blue-100 rounded-lg overflow-hidden">
-                    <div className="bg-blue-600 text-white rounded-t-lg">
-                        <div className="grid grid-cols-[50px_1.5fr_2fr_1.5fr_1.2fr_1fr] px-6 py-3 text-xs font-medium uppercase tracking-wider">
-                            <div className="text-left">No</div>
-                            <div className="text-left hidden md:block">Kategori</div>
-                            <div className="text-left">Judul Dokumen</div>
-                            <div className="text-left">Tanggal</div>
-                            <div className="text-left">Kategori Rilis</div>
-                            <div className="text-center">Aksi</div>
-                        </div>
-                    </div>
-
-                    <div className="divide-y divide-blue-50 bg-white">
-                        {loading ? (
-                            <p className="text-center p-8 text-gray-500">Memuat data...</p>
-                        ) : documents.length > 0 ? (
-                            documents.map((doc, index) => (
-                                <div key={doc.id} className="grid grid-cols-[50px_1.5fr_2fr_1.5fr_1.2fr_1fr] text-sm items-center px-6 py-4 hover:bg-blue-50 transition">
-                                    <div className="font-medium text-gray-900">{index + 1 + (currentPage - 1) * 10}</div>
-                                    
-                                    <div className="hidden md:block">
-                                        <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                                            doc.kategori_dokumen?.nama_kategori === 'LKIP' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                                            doc.kategori_dokumen?.nama_kategori === 'RENJA' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                            'bg-gray-100 text-gray-700 border border-gray-200'
-                                        }`}>
-                                            {doc.kategori_dokumen?.nama_kategori || 'Umum'}
-                                        </span>
-                                    </div>
-
-                                    <div className="text-gray-800 font-medium">{doc.title}</div>
-                                    <div className="text-gray-600">{doc.tanggal_dokumen ? formatDate(doc.tanggal_dokumen) : '-'}</div>
-                                    <div>
-                                        <span className="px-3 py-1 text-xs font-bold rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">
-                                            {doc.rilis_kategori?.nama || '-'}
-                                        </span>
-                                    </div>
-                                    <div className="text-center">
-                                        <a href={`${STORAGE_URL}${doc.file_path}`} target="_blank" rel="noopener noreferrer">
-                                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                                                <Download size={16} className="mr-1" /> Unduh
-                                            </Button>
-                                        </a>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center p-10 text-gray-500 italic bg-gray-50">
-                                {searchTerm ? `Tidak ada dokumen ditemukan untuk "${searchTerm}"` : "Tidak ada dokumen yang tersedia."}
+                        {/* Baris 1: Tombol Kembali & Inputs */}
+                        <div className="flex flex-col xl:flex-row gap-4">
+                            
+                            {/* Tombol Kembali (Kiri) */}
+                            <div className="shrink-0">
+                                <a href="/">
+                                    <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 px-6">
+                                        ← Kembali
+                                    </Button>
+                                </a>
                             </div>
-                        )}
+
+                            {/* Group Filter (Kanan) */}
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3">
+                                
+                                {/* Search */}
+                                <div className="md:col-span-5 relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <Input 
+                                        placeholder="Cari judul dokumen..." 
+                                        className="pl-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Tahun */}
+                                <div className="md:col-span-2">
+                                    <Input 
+                                        type="text" // atau number
+                                        placeholder="Tahun" 
+                                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10 text-center"
+                                        value={selectedYear}
+                                        onChange={(e) => setSelectedYear(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Tanggal */}
+                                <div className="md:col-span-3">
+                                    <Input 
+                                        type="date"
+                                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Reset Button */}
+                                <div className="md:col-span-2 flex items-center">
+                                     <button 
+                                        onClick={handleReset}
+                                        className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1 font-medium transition-colors px-2"
+                                     >
+                                        <RefreshCw size={14} /> Reset Filter
+                                     </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Baris 2: Kategori PILLS */}
+                        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-50">
+                            <button
+                                onClick={() => setSelectedCategory(null)}
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border ${
+                                    selectedCategory === null 
+                                    ? "bg-blue-600 text-white border-blue-600 shadow-md" 
+                                    : "bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600"
+                                }`}
+                            >
+                                Semua Kategori
+                            </button>
+
+                            {categories.map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setSelectedCategory(cat.id)}
+                                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border ${
+                                        selectedCategory === cat.id
+                                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                        : "bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600"
+                                    }`}
+                                >
+                                    {cat.nama_kategori}
+                                </button>
+                            ))}
+                        </div>
                     </div>
+
+                    {/* TABLE SECTION */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-blue-600 text-white uppercase text-xs font-semibold tracking-wider">
+                                <tr>
+                                    <th className="px-6 py-4 w-16 text-center">No</th>
+                                    <th className="px-6 py-4 w-40">Kategori</th>
+                                    <th className="px-6 py-4">Judul Dokumen</th>
+                                    <th className="px-6 py-4 w-24 text-center">Tahun</th>
+                                    <th className="px-6 py-4 w-48">Tanggal Upload</th>
+                                    <th className="px-6 py-4 w-32 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                            <div className="flex justify-center items-center gap-2">
+                                                <RefreshCw className="animate-spin h-5 w-5" /> Memuat data...
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : documents.length > 0 ? (
+                                    documents.map((doc, index) => (
+                                        <tr key={doc.id} className="hover:bg-blue-50/50 transition-colors">
+                                            <td className="px-6 py-4 text-center font-medium text-gray-500">
+                                                {index + 1 + (currentPage - 1) * 10}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                                    {doc.kategori_dokumen?.nama_kategori || "-"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-semibold text-gray-800">{doc.title}</div>
+                                                {/* Tampilkan Badge Rilis (Misal: Pertahun) sebagai sub-info jika ada */}
+                                                {doc.rilis_kategori && (
+                                                    <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                                        {doc.rilis_kategori.nama}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 text-center font-medium text-gray-600">
+                                                {doc.tahun || "-"}
+                                            </td>
+                                            <td className="px-6 py-4 text-gray-600">
+                                                <div className="flex flex-col">
+                                                    <span>{formatDate(doc.tanggal_dokumen)}</span>
+                                                    {doc.user && (
+                                                        <span className="text-[11px] text-gray-400 mt-0.5">
+                                                            Oleh: {doc.user.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <a 
+                                                    href={`${STORAGE_URL}${doc.file_path}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-9 w-full">
+                                                        <Download size={16} className="mr-2" /> Unduh
+                                                    </Button>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={6} className="px-6 py-12 text-center text-gray-400 italic bg-gray-50">
+                                            Tidak ada dokumen yang ditemukan.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* PAGINATION */}
+                    {!loading && totalPages > 1 && (
+                        <div className="bg-white px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="flex items-center gap-1"
+                            >
+                                <ChevronLeft size={16} /> Previous
+                            </Button>
+                            
+                            <span className="text-sm text-gray-600 font-medium">
+                                Halaman <span className="text-blue-600 font-bold">{currentPage}</span> dari {totalPages}
+                            </span>
+                            
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="flex items-center gap-1"
+                            >
+                                Next <ChevronRight size={16} />
+                            </Button>
+                        </div>
+                    )}
                 </div>
-
-                {!loading && totalPages > 1 && (
-                    <div className="mt-6 flex justify-between items-center text-sm">
-                        <Button 
-                            className="bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:border-gray-300 disabled:text-gray-400"
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-                            disabled={currentPage === 1}
-                        >
-                            Previous
-                        </Button>
-                        
-                        <span className="font-medium text-blue-900">
-                            Halaman <span className="font-bold">{currentPage}</span> dari {totalPages}
-                        </span>
-                        
-                        <Button 
-                            className="bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:border-gray-300 disabled:text-gray-400"
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
-                            disabled={currentPage === totalPages}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                )}
             </div>
-        </div>
-    );
-
-    return (
-
-        <main className="bg-gray-100 min-h-screen">
-            {renderHeader()}
-            {renderContent()}
         </main>
     );
 }

@@ -19,14 +19,20 @@ const PejabatCard = ({ pejabat }: { pejabat: Pejabat }) => (
         <div className="bg-white border-2 border-blue-100 rounded-xl shadow-md p-4 w-60 text-center hover:shadow-xl hover:border-blue-500 transition-all duration-300">
             <div className="relative w-24 h-24 mx-auto mb-2">
                 <Image
-                    src={pejabat.gambar_url || '/placeholder-avatar.png'} // Sediakan gambar placeholder
+                    src={pejabat.gambar_url || '/placeholder-avatar.png'} 
                     alt={pejabat.nama}
                     fill
                     className="rounded-full object-cover border-4 border-white shadow-sm"
                 />
             </div>
-            <h3 className="font-bold text-sm text-gray-800 leading-tight">{pejabat.jabatan}</h3>
-            <p className="text-blue-800 font-semibold mt-1">{pejabat.nama}</p>
+          
+            <h3 className="font-bold text-sm text-blue-600 leading-tight">
+                {pejabat.jabatan}
+            </h3>
+            
+            <p className="text-black font-bold mt-1">
+                {pejabat.nama}
+            </p>
         </div>
     </div>
 );

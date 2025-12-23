@@ -16,4 +16,21 @@ class EditDokumen extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+
+        if ($this->record->status === 'revisi') {
+            $data['status'] = 'menunggu';
+
+        }
+
+        return $data;
+    }
 }
